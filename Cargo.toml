@@ -1,0 +1,13 @@
+[package]
+name = "tokio-hyper"
+version = "0.1.0"
+authors = ["Carl Lerche <me@carllerche.com>"]
+
+[dependencies]
+log = "*"
+tokio = { git = "https://github.com/tokio-rs/tokio" }
+hyper = { git = "https://github.com/hyperium/hyper" }
+futures = "0.1.0"
+
+[dev-dependencies]
+env_logger = "0.3.0"
