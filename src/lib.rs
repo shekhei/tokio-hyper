@@ -56,7 +56,7 @@ impl Server {
     {
         let addr = self.addr.unwrap_or_else(|| "0.0.0.0:12345".parse().unwrap());
 
-        let (handle, server) = HyperServer::http(&addr).unwrap()
+        let (_handle, server) = HyperServer::http(&addr).unwrap()
             .handle(move |ctrl| {
                 ServerHandler::new(
                     ctrl,
