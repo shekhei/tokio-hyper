@@ -4,10 +4,10 @@ version = "0.1.0"
 authors = ["Carl Lerche <me@carllerche.com>"]
 
 [dependencies]
-log = "0.3.6"
-tokio = { git = "https://github.com/tokio-rs/tokio" }
+futures = { git = "https://github.com/alexcrichton/futures-rs" }
 hyper = { git = "https://github.com/hyperium/hyper" }
-futures = "0.1.0"
+log = "0.3.6"
+tokio-service = { git = "https://github.com/tokio-rs/tokio-service" }
 
 [dev-dependencies]
 env_logger = "0.3.0"

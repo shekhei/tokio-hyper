@@ -1,4 +1,4 @@
-extern crate tokio;
+extern crate tokio_service;
 extern crate hyper;
 extern crate futures;
 
@@ -15,10 +15,10 @@ pub use response::Response;
 pub use hyper::Error;
 pub use hyper::server::{Request as HyperRequest, Response as HyperResponse};
 
-use tokio::{NewService, Service};
+use tokio_service::Service;
 use hyper::{Control, Decoder, Encoder, HttpStream, Next};
 use hyper::server::{Server as HyperServer, Handler};
-use futures::{Future, Task};
+use futures::Future;
 use std::net::SocketAddr;
 use std::{io, thread};
 use std::sync::{Arc, Mutex};
@@ -51,16 +51,15 @@ impl Server {
         self
     }
 
-    pub fn serve<T>(self, new_service: T) -> io::Result<()>
-        where T: NewService<Req = Message<Request>, Resp = Message<Response>, Error = Error> + Send + 'static,
+    pub fn serve<F, T>(self, new_service: F) -> io::Result<()>
+        where T: Service<Req = Message<Request>, Resp = Message<Response>, Error = Error> + Send + 'static,
+              F: Fn() -> T + Send + 'static,
     {
         let addr = self.addr.unwrap_or_else(|| "0.0.0.0:12345".parse().unwrap());
 
         let (_handle, server) = HyperServer::http(&addr).unwrap()
             .handle(move |ctrl| {
-                ServerHandler::new(
-                    ctrl,
-                    new_service.new_service().unwrap())
+                ServerHandler::new(ctrl, new_service())
             }).unwrap();
 
         thread::spawn(move || {
@@ -122,11 +121,11 @@ impl<T> Handler<HttpStream> for ServerHandler<T>
                 let resp_fut = resp_fut.then(move |res| {
                     *dst.lock().unwrap() = Some(res);
                     ctrl.ready(Next::write()).unwrap();
-                    Ok(())
+                    Ok::<(), ()>(())
                 });
 
                 // Run the future
-                Task::new().run(Box::new(resp_fut));
+                resp_fut.forget();
 
                 return Next::wait()
             }
