@@ -124,8 +124,8 @@ impl<T> Handler<HttpStream> for ServerHandler<T>
                     Ok::<(), ()>(())
                 });
 
-                // Run the future
-                resp_fut.forget();
+                // TODO: needs tighter event loop integration.
+                run_future(resp_fut.boxed());
 
                 return Next::wait()
             }
@@ -168,4 +168,19 @@ impl<T> Handler<HttpStream> for ServerHandler<T>
 
         Next::write()
     }
+}
+
+fn run_future(f: futures::BoxFuture<(), ()>) {
+    use std::sync::Arc;
+    use futures::task::{self, Executor, Run};
+
+    struct Inline;
+
+    impl Executor for Inline {
+        fn execute(&self, run: Run) {
+            run.run();
+        }
+    }
+
+    task::spawn(f).execute(Arc::new(Inline));
 }
