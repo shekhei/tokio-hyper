@@ -52,8 +52,11 @@ impl Server {
     }
 
     pub fn serve<F, T>(self, new_service: F) -> io::Result<()>
-        where T: Service<Req = Message<Request>, Resp = Message<Response>, Error = Error> + Send + 'static,
-              F: Fn() -> T + Send + 'static,
+        where F: Fn() -> T + Send + 'static,
+              T::Future: Send + 'static,
+              T: Service<Request = Message<Request>,
+                        Response = Message<Response>,
+                           Error = Error> + Send + 'static,
     {
         let addr = self.addr.unwrap_or_else(|| "0.0.0.0:12345".parse().unwrap());
 
@@ -85,7 +88,8 @@ impl<T> ServerHandler<T> {
 }
 
 impl<T> Handler<HttpStream> for ServerHandler<T>
-    where T: Service<Req = Message<Request>, Resp = Message<Response>, Error = Error>
+    where T: Service<Request = Message<Request>, Response = Message<Response>, Error = Error>,
+          T::Future: Send + 'static,
 {
     fn on_request(&mut self, req: HyperRequest<HttpStream>) -> Next {
         self.req_head = Some(Request::from(req));
@@ -125,7 +129,7 @@ impl<T> Handler<HttpStream> for ServerHandler<T>
                 });
 
                 // TODO: needs tighter event loop integration.
-                run_future(resp_fut.boxed());
+                run_future(Box::new(resp_fut));
 
                 return Next::wait()
             }
@@ -170,7 +174,7 @@ impl<T> Handler<HttpStream> for ServerHandler<T>
     }
 }
 
-fn run_future(f: futures::BoxFuture<(), ()>) {
+fn run_future(f: Box<Future<Item = (), Error = ()> + Send + 'static>) {
     use std::sync::Arc;
     use futures::task::{self, Executor, Run};
 

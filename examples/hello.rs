@@ -6,7 +6,7 @@ extern crate hyper;
 extern crate tokio_hyper as http;
 
 use tokio_service::Service;
-use futures::{Future, finished, BoxFuture};
+use futures::{Async, Future, finished, BoxFuture};
 use std::thread;
 use std::time::Duration;
 
@@ -14,12 +14,12 @@ use std::time::Duration;
 struct MyService;
 
 impl Service for MyService {
-    type Req = http::Message<http::Request>;
-    type Resp = http::Message<http::Response>;
+    type Request = http::Message<http::Request>;
+    type Response = http::Message<http::Response>;
     type Error = http::Error;
-    type Fut = BoxFuture<Self::Resp, http::Error>;
+    type Future = BoxFuture<Self::Response, http::Error>;
 
-    fn call(&self, req: Self::Req) -> Self::Fut {
+    fn call(&self, req: Self::Request) -> Self::Future {
         println!("REQUEST: {:?}", req);
 
         // Create the HTTP response with the body
@@ -28,6 +28,10 @@ impl Service for MyService {
 
         // Return the response as an immediate future
         finished(resp).boxed()
+    }
+
+    fn poll_ready(&self) -> Async<()> {
+        Async::Ready(())
     }
 }
 
